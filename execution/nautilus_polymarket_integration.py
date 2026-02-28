@@ -33,6 +33,26 @@ from nautilus_trader.trading.strategy import Strategy
 load_dotenv()
 
 
+def _derive_funder_address() -> Optional[str]:
+    """
+    Derive Ethereum (Polygon) address from POLYMARKET_PK for use as funder.
+    When POLYMARKET_FUNDER is unset or empty, EOA users use this as their funder address.
+    """
+    funder = os.getenv("POLYMARKET_FUNDER")
+    if funder and funder.strip():
+        return funder.strip()
+    pk = os.getenv("POLYMARKET_PK")
+    if not pk or not pk.strip():
+        return None
+    try:
+        from eth_account import Account
+        acc = Account.from_key(pk.strip())
+        return acc.address
+    except Exception as e:
+        logger.warning(f"Could not derive funder from private key: {e}")
+        return None
+
+
 def current_btc_15m_slug() -> str:
     """
     Get the current BTC 15-minute market slug.
@@ -188,22 +208,31 @@ class PolymarketBTCIntegration:
         )
         
         logger.info(f"Loading BTC 15-min markets: {btc_markets}")
-        
+
+        # Funder address: use POLYMARKET_FUNDER or derive from private key (EOA)
+        funder = _derive_funder_address()
+        if funder:
+            logger.info(f"Using funder address: {funder[:10]}...{funder[-6:]}")
+        else:
+            logger.warning("No funder address (set POLYMARKET_FUNDER or ensure POLYMARKET_PK is set)")
+
         # Polymarket data client config
         poly_data_cfg = PolymarketDataClientConfig(
             private_key=os.getenv("POLYMARKET_PK"),
             api_key=os.getenv("POLYMARKET_API_KEY"),
             api_secret=os.getenv("POLYMARKET_API_SECRET"),
             passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
+            funder=funder,
             instrument_provider=instrument_cfg,
         )
-        
+
         # Polymarket execution client config
         poly_exec_cfg = PolymarketExecClientConfig(
             private_key=os.getenv("POLYMARKET_PK"),
             api_key=os.getenv("POLYMARKET_API_KEY"),
             api_secret=os.getenv("POLYMARKET_API_SECRET"),
             passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
+            funder=funder,
             instrument_provider=instrument_cfg,
         )
         

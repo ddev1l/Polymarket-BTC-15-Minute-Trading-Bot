@@ -78,6 +78,26 @@ else:
     logger.warning("Market order patch failed - orders may be rejected")
 
 
+def _derive_funder_address() -> Optional[str]:
+    """
+    Derive Ethereum (Polygon) address from POLYMARKET_PK for use as funder.
+    When POLYMARKET_FUNDER is unset or empty, EOA users use this as their funder address.
+    """
+    funder = os.getenv("POLYMARKET_FUNDER")
+    if funder and funder.strip():
+        return funder.strip()
+    pk = os.getenv("POLYMARKET_PK")
+    if not pk or not pk.strip():
+        return None
+    try:
+        from eth_account import Account
+        acc = Account.from_key(pk.strip())
+        return acc.address
+    except Exception as e:
+        logger.warning(f"Could not derive funder from private key: {e}")
+        return None
+
+
 # =============================================================================
 # CONSTANTS
 # =============================================================================
@@ -1381,12 +1401,19 @@ def run_integrated_bot(simulation: bool = False, enable_grafana: bool = True, te
         use_gamma_markets=True,
     )
 
+    funder = _derive_funder_address()
+    if funder:
+        logger.info(f"Using funder address: {funder[:10]}...{funder[-6:]}")
+    else:
+        logger.warning("No funder address (set POLYMARKET_FUNDER or ensure POLYMARKET_PK is set)")
+
     poly_data_cfg = PolymarketDataClientConfig(
         private_key=os.getenv("POLYMARKET_PK"),
         api_key=os.getenv("POLYMARKET_API_KEY"),
         api_secret=os.getenv("POLYMARKET_API_SECRET"),
         passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
         signature_type=1,
+        funder=funder,
         instrument_provider=instrument_cfg,
     )
 
@@ -1396,6 +1423,7 @@ def run_integrated_bot(simulation: bool = False, enable_grafana: bool = True, te
         api_secret=os.getenv("POLYMARKET_API_SECRET"),
         passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
         signature_type=1,
+        funder=funder,
         instrument_provider=instrument_cfg,
     )
 
