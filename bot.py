@@ -218,6 +218,9 @@ class IntegratedBTCStrategy(Strategy):
         # Phase 7: Learning Engine
         self.learning_engine = get_learning_engine()
 
+        # Last time we ran weight optimization (for 24h schedule)
+        self._last_weight_optimize = None
+
         # Phase 6: Grafana (optional)
         if enable_grafana:
             self.grafana_exporter = get_grafana_exporter()
@@ -614,6 +617,15 @@ class IntegratedBTCStrategy(Strategy):
                 else:
                     # Normal market switch
                     self._switch_to_next_market()
+
+            # Run learning engine weight optimization every 24 hours
+            if self._last_weight_optimize is None or (now - self._last_weight_optimize).total_seconds() >= 86400:
+                try:
+                    await self.learning_engine.optimize_weights()
+                    self._last_weight_optimize = now
+                    logger.info("Learning engine: weight optimization completed")
+                except Exception as e:
+                    logger.warning(f"Learning engine optimize_weights failed: {e}")
 
             await asyncio.sleep(10)
 
@@ -1023,6 +1035,7 @@ class IntegratedBTCStrategy(Strategy):
                 "simulated": True,
                 "num_signals": signal.num_signals if hasattr(signal, 'num_signals') else 1,
                 "fusion_score": signal.score,
+                "signal_sources": [s.source for s in signal.signals] if getattr(signal, "signals", None) else [],
             }
         )
 
