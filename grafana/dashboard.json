@@ -9,7 +9,7 @@
         "title": "Total Trades",
         "type": "stat",
         "gridPos": {"x": 0, "y": 0, "w": 3, "h": 3},
-        "targets": [{"expr": "trading_total_trades_total", "refId": "A"}]
+        "targets": [{"expr": "trades_total", "refId": "A"}]
       },
       {
         "id": 2,
@@ -31,7 +31,7 @@
         "type": "gauge",
         "gridPos": {"x": 9, "y": 0, "w": 3, "h": 3},
         "targets": [{
-          "expr": "trading_winning_trades_total / trading_total_trades_total * 100",
+          "expr": "trading_winning_trades_total / trades_total * 100",
           "refId": "A"
         }],
         "fieldConfig": {
@@ -102,7 +102,7 @@
         "type": "timeseries",
         "gridPos": {"x": 0, "y": 6, "w": 12, "h": 6},
         "targets": [
-          {"expr": "rate(trading_total_trades_total[5m])", "legendFormat": "Total Trades/min", "refId": "A"},
+          {"expr": "rate(trades_total[5m])", "legendFormat": "Total Trades/min", "refId": "A"},
           {"expr": "rate(trading_winning_trades_total[5m])", "legendFormat": "Wins/min", "refId": "B"},
           {"expr": "rate(trading_losing_trades_total[5m])", "legendFormat": "Losses/min", "refId": "C"}
         ]
